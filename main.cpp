@@ -40,7 +40,7 @@ int main() {
 	}
 
 	uint8_t* const img = new uint8_t[4*width*height];
-	fread(img, 1, 4*width*height, fp);
+	static_cast<void>(fread(img, 1, 4 * width*height, fp));
 
 	uint8_t* const ref = new uint8_t[4 * (width - 128)*height];
 	uint8_t* const result = new uint8_t[4 * (width-128)*height];
