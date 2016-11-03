@@ -40,7 +40,7 @@ int main() {
 	}
 
 	uint8_t* const img = new uint8_t[4*width*height];
-	auto ret = fread(img, 1, 4 * width*height, fp);
+	int ret = static_cast<int>(fread(img, 1, 4 * width*height, fp));
 	if (ret != 4*width*height) {
 		std::cerr << "Failed to read image. Aborting." << std::endl;
 		return EXIT_FAILURE;
