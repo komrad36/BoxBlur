@@ -117,13 +117,13 @@ void processRow(const uint8_t* const __restrict img, const int width, const int 
 	if (j != width - 129) processCols<last_row>(img, width, i, j, result, totals);
 }
 
-//void _boxBlur(const uint8_t* const __restrict img, const int width, const int start_row, const int rows, uint8_t* const __restrict result) {
-//	int i = start_row;
-//	for (; i < start_row + rows - 1; ++i) {
-//		processRow<false>(img, width, i, result);
-//	}
-//	processRow<true>(img, width, i, result);
-//}
+void _boxBlurNonTransposable(const uint8_t* const __restrict img, const int width, const int start_row, const int rows, uint8_t* const __restrict result) {
+	int i = start_row;
+	for (; i < start_row + rows - 1; ++i) {
+		processRow<false>(img, width, i, result);
+	}
+	processRow<true>(img, width, i, result);
+}
 
 void _boxBlur(const uint8_t* const __restrict img, const int width, const int start_row, const int rows, uint8_t* const __restrict result) {
 	for (int i = start_row; i < start_row + rows; ++i) {
