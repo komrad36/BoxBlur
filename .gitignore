@@ -1,0 +1,7 @@
+*
+!.gitignore
+!BoxBlur.h
+!Makefile
+!test.bin
+!main.cpp
+!README.md
