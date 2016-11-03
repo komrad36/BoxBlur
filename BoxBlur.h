@@ -91,8 +91,8 @@ void _boxBlurScalar(const uint8_t* const __restrict img, const int width, const 
 
 template<bool single_last_column>
 void processCols(const uint8_t* const __restrict img, const int width, const int i, const int j, uint8_t* const __restrict result, __m128i& totals) {
-	totals = _mm_sub_epi16(_mm_add_epi16(totals, _mm_cvtepu8_epi16(_mm_loadu_si128(reinterpret_cast<const __m128i* __restrict>(img + 4 * (i*width + j) + 508)))), _mm_cvtepu8_epi16(_mm_loadu_si128(reinterpret_cast<const __m128i* __restrict>(img + 4 * (i*width + j) - 4))));
-	totals = _mm_sub_epi16(_mm_add_epi16(totals, _mm_cvtepu8_epi16(_mm_loadu_si128(reinterpret_cast<const __m128i* __restrict>(img + 4 * (i*width + j + 1) + 508)))), _mm_cvtepu8_epi16(_mm_loadu_si128(reinterpret_cast<const __m128i* __restrict>(img + 4 * (i*width + j + 1) - 4))));
+	totals = _mm_subs_epu16(_mm_adds_epu16(totals, _mm_cvtepu8_epi16(_mm_loadu_si128(reinterpret_cast<const __m128i* __restrict>(img + 4 * (i*width + j) + 508)))), _mm_cvtepu8_epi16(_mm_loadu_si128(reinterpret_cast<const __m128i* __restrict>(img + 4 * (i*width + j) - 4))));
+	totals = _mm_subs_epu16(_mm_adds_epu16(totals, _mm_cvtepu8_epi16(_mm_loadu_si128(reinterpret_cast<const __m128i* __restrict>(img + 4 * (i*width + j + 1) + 508)))), _mm_cvtepu8_epi16(_mm_loadu_si128(reinterpret_cast<const __m128i* __restrict>(img + 4 * (i*width + j + 1) - 4))));
 	__m128i shft = _mm_packus_epi16(_mm_srli_epi16(totals, 7), _mm_setzero_si128());
 	if (single_last_column) {
 		_mm_stream_si32(reinterpret_cast<int*>(result + 4 * (i*(width - 128) + j + 1)), _mm_cvtsi128_si32(shft));
@@ -106,7 +106,7 @@ template<bool last_row>
 void processRow(const uint8_t* const __restrict img, const int width, const int i, uint8_t* const __restrict result) {
 	__m128i totals = _mm_setzero_si128();
 	for (int j = 0; j < 128; ++j) {
-		totals = _mm_add_epi16(totals, _mm_cvtepu8_epi16(_mm_loadu_si128(reinterpret_cast<const __m128i* __restrict>(img + 4 * (i*width + j)))));
+		totals = _mm_adds_epu16(totals, _mm_cvtepu8_epi16(_mm_loadu_si128(reinterpret_cast<const __m128i* __restrict>(img + 4 * (i*width + j)))));
 	}
 	__m128i shft = _mm_packus_epi16(_mm_srli_epi16(totals, 7), _mm_setzero_si128());
 	_mm_stream_si64(reinterpret_cast<long long*>(result + 4 * (i*(width - 128))), _mm_cvtsi128_si64(shft));
@@ -117,24 +117,26 @@ void processRow(const uint8_t* const __restrict img, const int width, const int 
 	if (j != width - 129) processCols<last_row>(img, width, i, j, result, totals);
 }
 
-void _boxBlurNonTransposable(const uint8_t* const __restrict img, const int width, const int start_row, const int rows, uint8_t* const __restrict result) {
-	int i = start_row;
-	for (; i < start_row + rows - 1; ++i) {
-		processRow<false>(img, width, i, result);
-	}
-	processRow<true>(img, width, i, result);
-}
+// slightly faster non-transposable version
+//void _boxBlur(const uint8_t* const __restrict img, const int width, const int start_row, const int rows, uint8_t* const __restrict result) {
+//	int i = start_row;
+//	for (; i < start_row + rows - 1; ++i) {
+//		processRow<false>(img, width, i, result);
+//	}
+//	processRow<true>(img, width, i, result);
+//}
 
+// slightly slower fully-transposable version
 void _boxBlur(const uint8_t* const __restrict img, const int width, const int start_row, const int rows, uint8_t* const __restrict result) {
 	for (int i = start_row; i < start_row + rows; ++i) {
 		__m128i totals = _mm_setzero_si128();
 		for (int j = 0; j < 128; ++j) {
-			totals = _mm_add_epi16(totals, _mm_cvtepu8_epi16(_mm_loadu_si128(reinterpret_cast<const __m128i* __restrict>(img + 4 * (i*width + j)))));
+			totals = _mm_adds_epu16(totals, _mm_cvtepu8_epi16(_mm_loadu_si128(reinterpret_cast<const __m128i* __restrict>(img + 4 * (i*width + j)))));
 		}
 		__m128i shft = _mm_packus_epi16(_mm_srli_epi16(totals, 7), _mm_setzero_si128());
 		_mm_stream_si32(reinterpret_cast<int*>(result + 4 * (i*(width - 128))), _mm_cvtsi128_si32(shft));
 		for (int j = 1; j < width - 128; ++j) {
-			totals = _mm_sub_epi16(_mm_add_epi16(totals, _mm_cvtepu8_epi16(_mm_loadu_si128(reinterpret_cast<const __m128i* __restrict>(img + 4 * (i*width + j) + 508)))), _mm_cvtepu8_epi16(_mm_loadu_si128(reinterpret_cast<const __m128i* __restrict>(img + 4 * (i*width + j) - 4))));
+			totals = _mm_subs_epu16(_mm_adds_epu16(totals, _mm_cvtepu8_epi16(_mm_loadu_si128(reinterpret_cast<const __m128i* __restrict>(img + 4 * (i*width + j) + 508)))), _mm_cvtepu8_epi16(_mm_loadu_si128(reinterpret_cast<const __m128i* __restrict>(img + 4 * (i*width + j) - 4))));
 			shft = _mm_packus_epi16(_mm_srli_epi16(totals, 7), _mm_setzero_si128());
 			_mm_stream_si32(reinterpret_cast<int*>(result + 4 * (i*(width - 128) + j)), _mm_cvtsi128_si32(shft));
 		}
